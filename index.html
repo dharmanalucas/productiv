@@ -48,6 +48,8 @@
   .checkbox.checked .check { display: block; }
   .task-text { font-size: 14px; line-height: 1.4; color: #ddd; }
   .task-item.done .task-text { text-decoration: line-through; }
+  .task-remove-btn { background: none; border: none; color: #333; font-size: 13px; cursor: pointer; padding: 4px 8px; font-family: inherit; flex-shrink: 0; }
+  .task-item.done .task-remove-btn { color: #555; }
   .task-cat { font-size: 10px; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; color: #666; }
   .rule { margin-top: 32px; padding: 16px; background: #1a1a08; border-radius: 8px; border: 1px solid #333300; text-align: center; }
   .rule-title { font-size: 11px; letter-spacing: 2px; color: #e2b714; margin-bottom: 6px; }
@@ -303,7 +305,7 @@ function renderToday() {
       first = false;
       grouped[bid].forEach(k => {
         const {cat,task}=parseTask(k); const done=plan.completed[k]; const cc2=CAT_CLASS[cat]||"cat-custom";
-        html += '<div class="task-item '+cc2+(done?' done':'')+(isCur?' active-block-task':'')+'" onclick="toggleTask(\''+escKey(k)+'\')"><div class="checkbox'+(done?' checked':'')+'"><span class="check">\u2713</span></div><div><div class="task-text">'+esc(task)+'</div><div class="task-cat">'+esc(cat)+'</div></div></div>';
+        html += '<div class="task-item '+cc2+(done?' done':'')+(isCur?' active-block-task':'')+'"><div class="checkbox'+(done?' checked':'')+'" onclick="toggleTask(\''+escKey(k)+'\')"><span class="check">\u2713</span></div><div style="flex:1" onclick="toggleTask(\''+escKey(k)+'\')"><div class="task-text">'+esc(task)+'</div><div class="task-cat">'+esc(cat)+'</div></div><button class="task-remove-btn" onclick="removeTodayTask(\''+escKey(k)+'\')">\u2715</button></div>';
       });
     });
     html += '</div>';
@@ -388,6 +390,7 @@ function closeModal() { document.getElementById("modalContainer").innerHTML = ""
 function moveTask(k, date, bid) { getPlan(date).assignments[k]=bid; save(); closeModal(); render(); }
 
 function toggleTask(k) { const p=getPlan(getToday()); if(p.completed[k])delete p.completed[k]; else p.completed[k]=true; save(); render(); }
+function removeTodayTask(k) { const p=getPlan(getToday()); p.tasks=p.tasks.filter(x=>x!==k); delete p.completed[k]; delete p.assignments[k]; save(); render(); }
 function addTask(k) { const t=getTomorrow(),p=getPlan(t); if(!p.tasks.includes(k)){p.tasks.push(k); const c=k.split("::")[0]; p.assignments[k]=AUTO_ASSIGN[c]||"biz1"; save(); render();} }
 function removeTask(k) { const t=getTomorrow(),p=getPlan(t); p.tasks=p.tasks.filter(x=>x!==k); delete p.completed[k]; delete p.assignments[k]; save(); render(); }
 function addCustom() { const i=document.getElementById("customInput"); if(!i||!i.value.trim())return; addTask("Custom::"+i.value.trim()); i.value=""; }
