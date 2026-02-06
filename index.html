@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily System">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Daily System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: #0d0d0d;
+    color: #e0e0e0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    overscroll-behavior: none;
+  }
+
+  .header { padding: 24px 20px 12px; border-bottom: 1px solid #222; padding-top: max(24px, env(safe-area-inset-top)); }
+  .header-title { font-size: 11px; letter-spacing: 4px; color: #666; margin-bottom: 4px; }
+  .header-date { font-size: 18px; font-weight: 600; color: #fff; }
+
+  .tabs {
+    display: flex; border-bottom: 1px solid #222;
+    position: sticky; top: 0; background: #0d0d0d; z-index: 10;
+  }
+  .tab {
+    flex: 1; padding: 14px 0; background: none; border: none;
+    color: #555; font-size: 11px; letter-spacing: 2px; cursor: pointer;
+    font-family: inherit; border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: #fff; border-bottom-color: #e2b714; }
+
+  .content { padding: 16px 20px; }
+
+  /* Current Block */
+  .current-block {
+    border: 1px solid #333; border-radius: 8px; padding: 16px;
+    margin-bottom: 20px; text-align: center;
+  }
+  .current-block-label { font-size: 10px; letter-spacing: 3px; color: #666; margin-bottom: 6px; }
+  .current-block-text { font-size: 20px; font-weight: 700; }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 20px; }
+  .progress-bar { height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+  .progress-fill { height: 100%; background: #34d399; border-radius: 2px; transition: width 0.3s ease; }
+  .progress-text { font-size: 11px; color: #666; text-align: right; }
+
+  /* Empty State */
+  .empty-state { text-align: center; padding: 48px 20px; }
+  .empty-icon { font-size: 48px; color: #333; margin-bottom: 12px; }
+  .empty-text { font-size: 16px; color: #666; margin-bottom: 8px; }
+  .empty-hint { font-size: 13px; color: #444; }
+
+  /* Task List */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px; background: #141414; border-radius: 6px;
+    border-left: 3px solid #666; cursor: pointer; transition: opacity 0.2s;
+  }
+  .task-item.done { opacity: 0.5; }
+
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 4px; border: 2px solid #666;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .checkbox.checked { background: #666; }
+  .checkbox .check { color: #0d0d0d; font-size: 13px; font-weight: 700; display: none; }
+  .checkbox.checked .check { display: block; }
+
+  .task-text { font-size: 14px; line-height: 1.4; color: #ddd; }
+  .task-item.done .task-text { text-decoration: line-through; }
+  .task-cat { font-size: 10px; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; color: #666; }
+
+  /* The Rule */
+  .rule {
+    margin-top: 32px; padding: 16px; background: #1a1a08;
+    border-radius: 8px; border: 1px solid #333300; text-align: center;
+  }
+  .rule-title { font-size: 11px; letter-spacing: 2px; color: #e2b714; margin-bottom: 6px; }
+  .rule-text { font-size: 14px; color: #ccc; line-height: 1.5; }
+
+  /* Schedule */
+  .schedule-list { display: flex; flex-direction: column; gap: 4px; }
+  .schedule-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 6px; border-left: 3px solid #666;
+  }
+  .schedule-item.active { outline: 2px solid; outline-offset: -2px; }
+  .schedule-time { font-size: 13px; font-weight: 600; width: 48px; flex-shrink: 0; }
+  .schedule-label { font-size: 13px; color: #ccc; flex: 1; }
+  .schedule-duration { font-size: 11px; color: #555; }
+
+  .schedule-note {
+    margin-top: 20px; padding: 16px; background: #111; border-radius: 8px;
+    font-size: 12px; color: #666; line-height: 1.6; white-space: pre-line;
+  }
+
+  /* Plan Tomorrow */
+  .plan-header { margin-bottom: 20px; }
+  .plan-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .plan-sub { font-size: 12px; color: #666; }
+
+  .selected-section { margin-bottom: 24px; padding: 16px; background: #111; border-radius: 8px; }
+  .section-label { font-size: 10px; letter-spacing: 2px; color: #e2b714; margin-bottom: 12px; }
+
+  .selected-task {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; background: #1a1a1a; border-radius: 4px;
+    border-left: 3px solid #666; margin-bottom: 6px;
+  }
+  .selected-text { font-size: 13px; color: #ccc; flex: 1; }
+  .remove-btn {
+    background: none; border: none; color: #555; font-size: 14px;
+    cursor: pointer; padding: 4px 8px; font-family: inherit;
+  }
+
+  .custom-wrap { display: flex; gap: 8px; margin-bottom: 24px; }
+  .custom-input {
+    flex: 1; padding: 12px 14px; background: #141414; border: 1px solid #333;
+    border-radius: 6px; color: #ddd; font-size: 13px; font-family: inherit; outline: none;
+  }
+  .custom-input:focus { border-color: #e2b714; }
+  .custom-btn {
+    padding: 12px 18px; background: #1a1a1a; border: 1px solid #333;
+    border-radius: 6px; color: #e2b714; font-size: 18px; cursor: pointer; font-family: inherit;
+  }
+
+  .bank-section { margin-bottom: 20px; }
+  .bank-cat { font-size: 10px; letter-spacing: 2px; margin-bottom: 8px; font-weight: 600; }
+
+  .bank-task {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 14px; background: #111; border-radius: 4px;
+    border-left: 3px solid #666; margin-bottom: 4px; cursor: pointer;
+  }
+  .bank-task.selected { opacity: 0.4; }
+  .bank-task-text { font-size: 13px; color: #aaa; flex: 1; padding-right: 8px; }
+  .bank-task-add { font-size: 18px; }
+  .bank-task-added { font-size: 12px; color: #666; }
+
+  .warning {
+    padding: 14px; background: #2a1a08; border-radius: 6px;
+    border: 1px solid #664400; font-size: 13px; color: #fb923c;
+    text-align: center; margin-top: 12px;
+  }
+
+  /* Type colors */
+  .type-ritual { background: #1a1a2e; border-left-color: #e2b714; }
+  .type-ritual .schedule-time { color: #e2b714; }
+  .type-ritual.active { outline-color: #e2b714; }
+
+  .type-business { background: #0a2a1a; border-left-color: #34d399; }
+  .type-business .schedule-time { color: #34d399; }
+  .type-business.active { outline-color: #34d399; }
+
+  .type-break { background: #1a1a1a; border-left-color: #666; }
+  .type-break .schedule-time { color: #999; }
+  .type-break.active { outline-color: #666; }
+
+  .type-admin { background: #1a1520; border-left-color: #a78bfa; }
+  .type-admin .schedule-time { color: #a78bfa; }
+  .type-admin.active { outline-color: #a78bfa; }
+
+  .type-side { background: #1a1520; border-left-color: #f472b6; }
+  .type-side .schedule-time { color: #f472b6; }
+  .type-side.active { outline-color: #f472b6; }
+
+  .type-crypto { background: #1a1008; border-left-color: #fb923c; }
+  .type-crypto .schedule-time { color: #fb923c; }
+  .type-crypto.active { outline-color: #fb923c; }
+
+  .type-stop { background: #2a0a0a; border-left-color: #ef4444; }
+  .type-stop .schedule-time { color: #ef4444; }
+  .type-stop.active { outline-color: #ef4444; }
+
+  .cat-heydrive { border-left-color: #34d399 !important; }
+  .cat-heydrive .task-cat, .cat-heydrive .bank-cat { color: #34d399; }
+  .cat-heydrive .checkbox { border-color: #34d399; }
+  .cat-heydrive .checkbox.checked { background: #34d399; }
+  .cat-heydrive .bank-task-add { color: #34d399; }
+
+  .cat-crypto { border-left-color: #fb923c !important; }
+  .cat-crypto .task-cat { color: #fb923c; }
+  .cat-crypto .checkbox { border-color: #fb923c; }
+  .cat-crypto .checkbox.checked { background: #fb923c; }
+  .cat-crypto .bank-task-add { color: #fb923c; }
+
+  .cat-side { border-left-color: #f472b6 !important; }
+  .cat-side .task-cat { color: #f472b6; }
+  .cat-side .checkbox { border-color: #f472b6; }
+  .cat-side .checkbox.checked { background: #f472b6; }
+  .cat-side .bank-task-add { color: #f472b6; }
+
+  .cat-admin { border-left-color: #a78bfa !important; }
+  .cat-admin .task-cat { color: #a78bfa; }
+  .cat-admin .checkbox { border-color: #a78bfa; }
+  .cat-admin .checkbox.checked { background: #a78bfa; }
+  .cat-admin .bank-task-add { color: #a78bfa; }
+
+  .cat-custom { border-left-color: #888 !important; }
+  .cat-custom .task-cat { color: #888; }
+  .cat-custom .checkbox { border-color: #888; }
+  .cat-custom .checkbox.checked { background: #888; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">DAILY SYSTEM</div>
+  <div class="header-date" id="headerDate"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="today" onclick="switchTab('today')">TODAY</button>
+  <button class="tab" data-tab="schedule" onclick="switchTab('schedule')">SCHEDULE</button>
+  <button class="tab" data-tab="plan" onclick="switchTab('plan')">PLAN TMR</button>
+</div>
+
+<div id="todayView" class="content"></div>
+<div id="scheduleView" class="content hidden"></div>
+<div id="planView" class="content hidden"></div>
+
+<script>
+// ── Data ──
+const SCHEDULE = [
+  { time: "09:00", label: "Wake + No Phone", duration: 15, type: "ritual" },
+  { time: "09:15", label: "Review Plan + Supplements", duration: 15, type: "ritual" },
+  { time: "09:30", label: "Business Block 1", duration: 180, type: "business" },
+  { time: "12:30", label: "Lunch + Walk", duration: 60, type: "break" },
+  { time: "13:30", label: "Business Block 2", duration: 120, type: "business" },
+  { time: "15:30", label: "Admin + Emails + LinkedIn", duration: 60, type: "admin" },
+  { time: "16:30", label: "Side Project / Option 2", duration: 90, type: "side" },
+  { time: "18:00", label: "Break / Exercise / Life", duration: 120, type: "break" },
+  { time: "20:00", label: "Crypto Window", duration: 235, type: "crypto" },
+  { time: "23:55", label: "Plan Tomorrow (5 min)", duration: 5, type: "ritual" },
+  { time: "00:00", label: "HARD STOP — Sleep", duration: 0, type: "stop" },
+];
+
+const TASK_BANK = {
+  "HeyDrive": [
+    "Chase Emma Hayes for VW finance update",
+    "Research alternative finance providers",
+    "Apply to auction sites (need dad's login)",
+    "FCA share allocation (Companies House)",
+    "Build supplier contact list",
+    "Prep for IAR with James",
+    "Research competitor car sourcing models",
+    "Script refinement / outreach prep",
+    "Process mapping for when FCA clears",
+    "LinkedIn outreach (15 min)",
+  ],
+  "Crypto": [
+    "Review copy trader friend's wallet analyser",
+    "Analyse the 3 profitable wallets",
+    "Research/build copy trading setup",
+    "Improve existing trading bot",
+    "Evening meme coin session (contained)",
+  ],
+  "Side Projects": [
+    "30k data: research monetisation angles",
+    "30k data: outreach campaign draft",
+    "Depress Markets / $WELLWELL dev",
+    "Satirical site content",
+  ],
+  "Admin / Life": [
+    "Chase housing associations (dad's properties)",
+    "Property tax optimisation research",
+    "Exercise / gym",
+    "Meal prep",
+    "GP audit follow-up for dad",
+  ],
+};
+
+const CAT_CLASS = {
+  "HeyDrive": "cat-heydrive",
+  "Crypto": "cat-crypto",
+  "Side Projects": "cat-side",
+  "Admin / Life": "cat-admin",
+  "Custom": "cat-custom",
+};
+
+const CAT_COLORS = {
+  "HeyDrive": "#34d399",
+  "Crypto": "#fb923c",
+  "Side Projects": "#f472b6",
+  "Admin / Life": "#a78bfa",
+  "Custom": "#888",
+};
+
+// ── State ──
+let currentView = "today";
+let data = { plans: {} };
+
+function getToday() { return new Date().toISOString().split("T")[0]; }
+function getTomorrow() { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; }
+
+function getPlanDate() { return currentView === "plan" ? getTomorrow() : getToday(); }
+
+function getPlan(date) {
+  if (!data.plans[date]) data.plans[date] = { tasks: [], completed: {} };
+  return data.plans[date];
+}
+
+function save() { localStorage.setItem("daily-system-v1", JSON.stringify(data)); }
+function load() {
+  try {
+    const stored = localStorage.getItem("daily-system-v1");
+    if (stored) data = JSON.parse(stored);
+  } catch(e) {}
+}
+
+function getCurrentBlockIndex() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  for (let i = SCHEDULE.length - 1; i >= 0; i--) {
+    const [h, m] = SCHEDULE[i].time.split(":").map(Number);
+    if (mins >= h * 60 + m) return i;
+  }
+  return 0;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function parseTask(key) {
+  const idx = key.indexOf("::");
+  return { cat: key.substring(0, idx), task: key.substring(idx + 2) };
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  currentView = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.getElementById("todayView").classList.toggle("hidden", tab !== "today");
+  document.getElementById("scheduleView").classList.toggle("hidden", tab !== "schedule");
+  document.getElementById("planView").classList.toggle("hidden", tab !== "plan");
+  updateHeader();
+  render();
+}
+
+function updateHeader() {
+  document.getElementById("headerDate").textContent = formatDate(getPlanDate());
+}
+
+// ── Render ──
+function render() {
+  if (currentView === "today") renderToday();
+  else if (currentView === "schedule") renderSchedule();
+  else if (currentView === "plan") renderPlan();
+}
+
+function renderToday() {
+  const el = document.getElementById("todayView");
+  const plan = getPlan(getToday());
+  const blockIdx = getCurrentBlockIndex();
+  const block = SCHEDULE[blockIdx];
+  const completedCount = Object.keys(plan.completed).length;
+  const totalTasks = plan.tasks.length;
+
+  let html = "";
+
+  // Current block
+  html += `<div class="current-block" style="border-color: ${getTypeColor(block.type)}">
+    <div class="current-block-label">NOW</div>
+    <div class="current-block-text" style="color: ${getTypeColor(block.type)}">${block.label}</div>
+  </div>`;
+
+  // Progress
+  if (totalTasks > 0) {
+    const pct = (completedCount / totalTasks) * 100;
+    html += `<div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-text">${completedCount}/${totalTasks} tasks done</div>
+    </div>`;
+  }
+
+  // Tasks
+  if (totalTasks === 0) {
+    html += `<div class="empty-state">
+      <div class="empty-icon">○</div>
+      <div class="empty-text">No tasks planned for today</div>
+      <div class="empty-hint">Use PLAN TMR tonight to set tomorrow up</div>
+    </div>`;
+  } else {
+    html += `<div class="task-list">`;
+    plan.tasks.forEach((key, i) => {
+      const { cat, task } = parseTask(key);
+      const done = plan.completed[key];
+      const catClass = CAT_CLASS[cat] || "cat-custom";
+      html += `<div class="task-item ${catClass} ${done ? 'done' : ''}" onclick="toggleTask('${escKey(key)}')">
+        <div class="checkbox ${done ? 'checked' : ''}"><span class="check">✓</span></div>
+        <div>
+          <div class="task-text">${esc(task)}</div>
+          <div class="task-cat">${esc(cat)}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // The Rule
+  html += `<div class="rule">
+    <div class="rule-title">⚡ THE RULE</div>
+    <div class="rule-text">Don't think. Check the plan. Do the next task.</div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function renderSchedule() {
+  const el = document.getElementById("scheduleView");
+  const blockIdx = getCurrentBlockIndex();
+
+  let html = `<div class="schedule-list">`;
+  SCHEDULE.forEach((block, i) => {
+    html += `<div class="schedule-item type-${block.type} ${i === blockIdx ? 'active' : ''}">
+      <div class="schedule-time">${block.time}</div>
+      <div class="schedule-label">${block.label}</div>
+      ${block.duration > 0 ? `<div class="schedule-duration">${block.duration}m</div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="schedule-note">Business blocks = HeyDrive tasks first.\nIf genuinely blocked, use for side project.\nCrypto stays in its box: 8pm–midnight.</div>`;
+
+  el.innerHTML = html;
+}
+
+function renderPlan() {
+  const el = document.getElementById("planView");
+  const plan = getPlan(getTomorrow());
+
+  let html = `<div class="plan-header">
+    <div class="plan-title">Pick 3–5 tasks for tomorrow</div>
+    <div class="plan-sub">Less is more. You can always add, never subtract focus.</div>
+  </div>`;
+
+  // Selected
+  if (plan.tasks.length > 0) {
+    html += `<div class="selected-section">
+      <div class="section-label">TOMORROW'S PLAN (${plan.tasks.length})</div>`;
+    plan.tasks.forEach(key => {
+      const { cat, task } = parseTask(key);
+      const catClass = CAT_CLASS[cat] || "cat-custom";
+      html += `<div class="selected-task ${catClass}">
+        <div class="selected-text">${esc(task)}</div>
+        <button class="remove-btn" onclick="removeTask('${escKey(key)}')">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Custom
+  html += `<div class="custom-wrap">
+    <input class="custom-input" id="customInput" placeholder="Add a custom task..." onkeydown="if(event.key==='Enter')addCustom()">
+    <button class="custom-btn" onclick="addCustom()">+</button>
+  </div>`;
+
+  // Bank
+  Object.entries(TASK_BANK).forEach(([category, tasks]) => {
+    const catColor = CAT_COLORS[category] || "#999";
+    html += `<div class="bank-section">
+      <div class="bank-cat" style="color:${catColor}">${category.toUpperCase()}</div>`;
+    tasks.forEach(task => {
+      const key = `${category}::${task}`;
+      const selected = plan.tasks.includes(key);
+      const catClass = CAT_CLASS[category] || "cat-custom";
+      html += `<div class="bank-task ${catClass} ${selected ? 'selected' : ''}" onclick="${selected ? '' : `addTask('${escKey(key)}')`}">
+        <div class="bank-task-text">${esc(task)}</div>
+        ${selected ? `<span class="bank-task-added">added</span>` : `<span class="bank-task-add">+</span>`}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  if (plan.tasks.length >= 5) {
+    html += `<div class="warning">⚠️ That's ${plan.tasks.length} tasks. Be honest — will you actually do all of them?</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Actions ──
+function toggleTask(key) {
+  const plan = getPlan(getToday());
+  if (plan.completed[key]) delete plan.completed[key];
+  else plan.completed[key] = true;
+  save(); render();
+}
+
+function addTask(key) {
+  const plan = getPlan(getTomorrow());
+  if (!plan.tasks.includes(key)) { plan.tasks.push(key); save(); render(); }
+}
+
+function removeTask(key) {
+  const plan = getPlan(getTomorrow());
+  plan.tasks = plan.tasks.filter(t => t !== key);
+  delete plan.completed[key];
+  save(); render();
+}
+
+function addCustom() {
+  const input = document.getElementById("customInput");
+  if (!input || !input.value.trim()) return;
+  const key = `Custom::${input.value.trim()}`;
+  addTask(key);
+  input.value = "";
+}
+
+// ── Helpers ──
+function getTypeColor(type) {
+  const map = { ritual: "#e2b714", business: "#34d399", break: "#666", admin: "#a78bfa", side: "#f472b6", crypto: "#fb923c", stop: "#ef4444" };
+  return map[type] || "#666";
+}
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function escKey(s) { return s.replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+
+// ── Init ──
+load();
+updateHeader();
+render();
+setInterval(() => { render(); }, 60000);
+
+// Service worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
